@@ -1,0 +1,6 @@
+{
+  "name": "Sơn Tinh – Thủy Tinh: Đại Chiến Sính Lễ 4.0",
+  "description": "Trò chơi web chủ đề Dân Gian Remix: hóa thân thành Sơn Tinh đấu trí và tốc độ cùng Bot Thủy Tinh qua 4 màn sính lễ và đại chiến Lấp Biển Dời Núi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
