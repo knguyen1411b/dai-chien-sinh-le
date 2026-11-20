@@ -4,19 +4,25 @@ import { clamp, distance, Game, label, random, Services, sfx } from './play';
 type Resource={x:number;y:number;kind:string;hold:number};
 type Enemy={x:number;y:number;hp:number;kind:string;side:number};
 export function floodGame(s:Services):Game {
-  const p={x:520,y:0,vy:0};
+  const p={x:735,y:0,vy:0};
+  const buildX=275;
+  const quarryStart=700,quarryEnd=1195;
   const resources:Resource[]=[];
   const enemies:Enemy[]=[];
   const projectiles:{x:number;y:number;vx:number;vy:number}[]=[];
   const bag:string[]=[];
   const waves:{x:number;size:number}[]=[];
-  let time=0,H=110,W=40,nextRock=2,nextTree=6,nextBoulder=10,nextMonster=8,waveIndex=0,wall=false,ultimate=0,throwCD=0,buildCD=0,best=H-W,defeated=0,anger=0;
+  let time=0,H=110,W=40,nextRock=.6,nextTree=6,nextBoulder=10,nextMonster=8,waveIndex=0,wall=false,ultimate=0,throwCD=0,buildCD=0,best=H-W,defeated=0,anger=0;
   const waveTimes=[12,24,36,48,54];
   const rise={easy:.8,normal:1,hard:1.3}[s.difficulty];
   const top=()=>clamp(720-H*3,140,480);
-  const ground=(x:number)=>top()+Math.max(0,Math.abs(x-640)-100)*(700-top())/380;
+  const quarryY=()=>top()+35;
+  const ground=(x:number)=>x<=360?top():x>=660?quarryY():top()+(x-360)/300*35;
   const waterY=()=>Math.max(80,720-W*3);
-  const shore=(side:number)=>640+side*(100+clamp((waterY()-top())/(700-top()),0,1)*380);
+  const shore=(side:number)=>{
+    const submerged=clamp((700-waterY())/(700-top()),0,1);
+    return side<0?40+50*submerged:550-210*submerged;
+  };
   const used=()=>bag.reduce((n,k)=>n+(k==='boulder'?2:1),0);
   p.y=ground(p.x);
   function raise(amount:number){
@@ -27,18 +33,18 @@ export function floodGame(s:Services):Game {
   }
   function spawn(kind:string,limit:number){
     if(resources.filter(r=>r.kind===kind).length>=limit)return;
-    // Materials stay on the two mountain shoulders, away from the building altar.
-    const candidates=Array.from({length:10},()=>Math.random()<.5?random(335,515):random(765,945));
-    const x=candidates.find(x=>ground(x)<waterY()-24&&resources.every(r=>Math.abs(r.x-x)>24));
+    // All gathering is on the right plateau; the left altar is reserved for building.
+    const candidates=Array.from({length:24},()=>random(quarryStart,quarryEnd));
+    const x=candidates.find(x=>ground(x)<waterY()-24&&resources.every(r=>Math.abs(r.x-x)>20));
     if(x!==undefined)resources.push({x,y:ground(x),kind,hold:0});
   }
   function useUltimate(){
     if(ultimate>0)return;
     raise(10);W=Math.max(0,W-5);enemies.length=0;ultimate=20;
-    s.effect(640,top()-25,'THẦN NÚI NỔI GIẬN!',true);sfx('ultimate');
+    s.effect(buildX,top()-25,'THẦN NÚI NỔI GIẬN!',true);sfx('ultimate');
   }
   function interact(dt:number){
-    if(Math.abs(p.x-640)<72&&Math.abs(p.y-ground(p.x))<10&&bag.length&&buildCD<=0){
+    if(Math.abs(p.x-buildX)<65&&Math.abs(p.y-ground(p.x))<10&&bag.length&&buildCD<=0){
       const gain=bag.reduce((n,k)=>n+(k==='boulder'?12:k==='tree'?3:4),0);
       raise(gain);bag.length=0;buildCD=.3;s.effect(p.x,p.y-100,`Nâng đất +${gain} thước`,true);sfx('raise');return;
     }
@@ -54,8 +60,8 @@ export function floodGame(s:Services):Game {
     enemies.push({x:side<0?20:1260,y:waterY()+72,hp:kind==='crab'?2:3,kind,side});
     s.effect(side<0?120:1160,waterY()-35,'Thủy quái dưới nước!');sfx('warning');
   }
-  for(const x of [355,430,500,780,850,925])resources.push({x,y:ground(x),kind:'rock',hold:0});
-  for(const x of [385,895])resources.push({x,y:ground(x),kind:'tree',hold:0});
+  for(const x of [700,738,776,814,852,890,928,966,1004,1042,1080,1118,1156,1194])resources.push({x,y:ground(x),kind:'rock',hold:0});
+  for(const x of [760,1120])resources.push({x,y:ground(x),kind:'tree',hold:0});
   return {
     key(code){
       if((code==='Space'||code==='KeyW'||code==='ArrowUp')&&p.y>=ground(p.x)-2)p.vy=-380;
@@ -72,7 +78,7 @@ export function floodGame(s:Services):Game {
         const i=bag.indexOf('rock');
         if(i>=0){bag.splice(i,1);throwCD=.25;const d=Math.hypot(s.input.x-p.x,s.input.y-(p.y-45))||1;
           projectiles.push({x:p.x,y:p.y-45,vx:(s.input.x-p.x)/d*650,vy:(s.input.y-(p.y-45))/d*650});sfx('throw');}
-        else s.effect(p.x,p.y-100,'Nhặt đá trên sườn núi trước');
+        else s.effect(p.x,p.y-100,'Sang bãi đá bên phải để nhặt');
       }
     },
     update(dt){
@@ -80,12 +86,12 @@ export function floodGame(s:Services):Game {
       W+=rise*(time>=20&&time<=35?1.5:1)*dt;
       const oldGround=ground(p.x),wasGrounded=p.y>=oldGround-2;
       const movement=+(s.input.keys.has('KeyD')||s.input.keys.has('ArrowRight'))-+(s.input.keys.has('KeyA')||s.input.keys.has('ArrowLeft'));
-      p.x=clamp(p.x+movement*220*(used()>2?.85:1)*dt,320,960);
+      p.x=clamp(p.x+movement*220*(used()>2?.85:1)*dt,100,1220);
       // Keep a walking character attached to the slope instead of falling through the terrain.
       if(wasGrounded&&p.vy>=0){p.y=ground(p.x);p.vy=0;}
       else{p.vy+=950*dt;p.y=Math.min(ground(p.x),p.y+p.vy*dt);if(p.y>=ground(p.x))p.vy=0;}
       if(s.input.keys.has('KeyE'))interact(dt);else resources.forEach(r=>r.hold=0);
-      if(time>=nextRock){nextRock+=1.5;spawn('rock',8);}
+      if(time>=nextRock){nextRock+=.6;spawn('rock',18);}
       if(time>=nextTree){nextTree+=6;spawn('tree',4);}
       if(time>=nextBoulder){nextBoulder+=10;spawn('boulder',2);}
       resources.forEach(r=>r.y=ground(r.x));
@@ -99,7 +105,7 @@ export function floodGame(s:Services):Game {
         if(w.x<=shore(1)+35){
           if(wall){w.size*=.5;wall=false;s.effect(shore(1),waterY()-50,'Tường đỡ nửa sức sóng!',true);}
           W+=w.size;waves.splice(i,1);sfx('hit');
-          if(Math.abs(p.x-640)>200){bag.length=0;p.x=clamp(p.x+(p.x<640?35:-35),320,960);p.y=Math.min(p.y,ground(p.x));s.effect(p.x,p.y-80,'Sóng cuốn mất đồ!',true);}
+          if(p.y>=waterY()-15&&s.difficulty!=='easy'){bag.length=0;s.effect(p.x,p.y-80,'Sóng cuốn mất đồ!',true);}
         }
       }
       for(const e of enemies){
@@ -114,14 +120,14 @@ export function floodGame(s:Services):Game {
         const b=projectiles[i];b.x+=b.vx*dt;b.y+=b.vy*dt;
         const e=enemies.find(e=>distance({x:e.x,y:e.y-32},b)<52);
         if(e){e.hp--;s.effect(e.x,e.y-45,'−1',true);sfx('hit');projectiles.splice(i,1);
-          if(e.hp<=0){spawn('rock',8);enemies.splice(enemies.indexOf(e),1);defeated++;}}
+          if(e.hp<=0){spawn('rock',18);enemies.splice(enemies.indexOf(e),1);defeated++;}}
         else if(b.x<0||b.x>1280||b.y<0||b.y>740)projectiles.splice(i,1);
       }
       best=Math.max(best,H-W);
       const warning=waveIndex<waveTimes.length&&waveTimes[waveIndex]-time<=4?(waveIndex===4?'SÓNG THẦN ĐANG ĐẾN!':'Sóng sắp tới từ bên phải!'):time>=20&&time<=35?'MƯA DÔNG — NƯỚC DÂNG NHANH':'';
-      if(W>=H)s.finish(false,'Nước đã chạm đỉnh núi!','Nhặt đá trên sườn núi, mang về bệ giữa và nhấn E để nâng đất. Dùng Q mỗi 20 giây.',Math.round(time*10),0,[{label:'Trụ vững',value:`${Math.floor(time)} giây`}]);
+      if(W>=H)s.finish(false,'Nước đã chạm đỉnh núi!','Nhặt đá ở bãi bên phải, mang về bệ bên trái rồi nhấn E để nâng núi. Dùng Q mỗi 20 giây.',Math.round(time*10),0,[{label:'Trụ vững',value:`${Math.floor(time)} giây`}]);
       else if(!s.endless&&time>=60)s.finish(true,'Tản Viên đứng vững!','Thủy Tinh kiệt sức rút quân. Bình yên trở lại với Văn Lang.',Math.round(H*10),0,[{label:'Độ cao núi',value:`${Math.round(H)} thước`},{label:'Thủy quái hạ',value:String(defeated)},{label:'Khoảng cách tốt nhất',value:`${Math.round(best)} thước`}]);
-      s.hud({time:s.endless?time:60-time,player:clamp(H/200,0,1),bot:clamp(W/200,0,1),status:`Mang ${used()}/4 ô · Đá ${bag.filter(k=>k==='rock').length} · Cây ${bag.filter(k=>k==='tree').length} · Tảng ${bag.filter(k=>k==='boulder').length}`,detail:`Núi ${Math.round(H)} / Nước ${Math.round(W)} thước · Q: ${ultimate<=0?'SẴN SÀNG':Math.ceil(ultimate)+'s'} · Tường ${wall?'đã dựng':'chưa có'}`,warning});
+      s.hud({time:s.endless?time:60-time,player:clamp(H/200,0,1),bot:clamp(W/200,0,1),status:`${p.x>660?'BÃI ĐÁ BÊN PHẢI':Math.abs(p.x-buildX)<65?'BỆ NÂNG NÚI · E':'← ĐEM ĐÁ VỀ BÊN TRÁI'} · Mang ${used()}/4 ô · Đá ${bag.filter(k=>k==='rock').length} · Cây ${bag.filter(k=>k==='tree').length} · Tảng ${bag.filter(k=>k==='boulder').length}`,detail:`Núi ${Math.round(H)} / Nước ${Math.round(W)} thước · Q: ${ultimate<=0?'SẴN SÀNG':Math.ceil(ultimate)+'s'} · Tường ${wall?'đã dựng':'chưa có'}`,warning});
     },
     draw(ctx){
       floodSky(ctx);
@@ -129,22 +135,36 @@ export function floodGame(s:Services):Game {
       for(let i=0;i<6;i++){
         ctx.fillStyle=i%2?'#bccdb1':'#a9c2b3';ctx.beginPath();ctx.moveTo(i*250-180,550);ctx.lineTo(i*250+30,255+(i%3)*40);ctx.lineTo(i*250+260,550);ctx.fill();
       }
-      ctx.fillStyle='#c88753';ctx.beginPath();ctx.moveTo(160,720);
-      for(let x=160;x<=1120;x+=8)ctx.lineTo(x,ground(x));
-      ctx.lineTo(1120,720);ctx.closePath();ctx.fill();
+      const summit=top(),quarry=quarryY();
+      // Left: one mountain and its delivery altar. Right: a broad gathering plateau.
+      ctx.fillStyle='#c88753';ctx.beginPath();ctx.moveTo(40,720);ctx.lineTo(90,summit);ctx.lineTo(360,summit);ctx.lineTo(550,720);ctx.closePath();ctx.fill();
       for(let layer=0;layer<7;layer++){
-        const y=top()+40+layer*48;if(y>700)break;
-        const edge=100+(y-top())/(700-top())*380;
-        ctx.strokeStyle=layer%2?'#a66943':'#dfad70';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(640-edge,y);ctx.quadraticCurveTo(640,y+15,640+edge,y);ctx.stroke();
+        const y=summit+40+layer*48;if(y>710)break;
+        const ratio=(y-summit)/(720-summit);
+        ctx.strokeStyle=layer%2?'#a66943':'#dfad70';ctx.lineWidth=5;
+        ctx.beginPath();ctx.moveTo(90-50*ratio,y);ctx.quadraticCurveTo(280,y+12,360+190*ratio,y);ctx.stroke();
       }
-      ctx.strokeStyle='#75955b';ctx.lineWidth=11;ctx.lineJoin='round';ctx.beginPath();
-      for(let x=200;x<=1080;x+=8){if(x===200)ctx.moveTo(x,ground(x));else ctx.lineTo(x,ground(x));}ctx.stroke();
-      const summit=top();
-      // A small house on the rear of the summit; the altar is a separate, visible delivery point.
-      ctx.fillStyle='#f6e6b8';ctx.fillRect(615,summit-63,87,63);ctx.fillStyle='#ae5338';ctx.beginPath();ctx.moveTo(600,summit-63);ctx.lineTo(657,summit-108);ctx.lineTo(717,summit-63);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#815c3e';ctx.fillRect(644,summit-37,22,37);sprite(ctx,'princess',690,summit,38,65);
-      ctx.fillStyle='#edcc86';ctx.strokeStyle='#a7753d';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(595,summit+3,43,9,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-      label(ctx,'E · NÂNG ĐẤT',595,summit-17,15);
+      ctx.strokeStyle='#75955b';ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(90,summit);ctx.lineTo(360,summit);ctx.stroke();
+      ctx.fillStyle='#baa379';ctx.fillRect(660,quarry,590,720-quarry);
+      for(let row=0;row<5;row++){
+        const y=quarry+45+row*55;if(y>715)break;
+        ctx.strokeStyle='#9c8764';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(660,y);ctx.lineTo(1250,y);ctx.stroke();
+        for(let x=680+(row%2)*40;x<1240;x+=85){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+18,y+22);ctx.stroke();}
+      }
+      ctx.fillStyle='#d9c398';ctx.fillRect(660,quarry,590,15);
+      ctx.strokeStyle='#79915b';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(660,quarry);ctx.lineTo(1250,quarry);ctx.stroke();
+      // A continuous ramp lets the player carry stones back without precision jumps.
+      ctx.strokeStyle='#91633c';ctx.lineWidth=16;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(355,summit+3);ctx.lineTo(665,quarry+3);ctx.stroke();
+      ctx.strokeStyle='#ead09b';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(355,summit);ctx.lineTo(665,quarry);ctx.stroke();
+      ctx.strokeStyle='#a97d4e';ctx.lineWidth=4;
+      for(let x=380;x<650;x+=35){const y=ground(x);ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x,y+7);ctx.stroke();}
+      ctx.lineCap='butt';
+      ctx.fillStyle='#f6e6b8';ctx.fillRect(125,summit-63,87,63);ctx.fillStyle='#ae5338';ctx.beginPath();ctx.moveTo(110,summit-63);ctx.lineTo(167,summit-108);ctx.lineTo(227,summit-63);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#815c3e';ctx.fillRect(154,summit-37,22,37);sprite(ctx,'princess',210,summit,38,65);
+      ctx.fillStyle='#edcc86';ctx.strokeStyle='#a7753d';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(buildX,summit+3,43,9,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      label(ctx,'E · NÂNG NÚI',buildX,summit-22,17);
+      label(ctx,'BÃI ĐÁ · NHẶT / GIỮ E',950,Math.max(165,quarry-100),20);
+      label(ctx,'← MANG ĐÁ VỀ NÂNG NÚI',510,summit-32,15);
       for(const r of resources){
         if(r.kind==='tree'){
           ctx.fillStyle='#9d6b40';ctx.fillRect(r.x-5,r.y-52,10,52);ctx.fillStyle='#769d5e';ctx.beginPath();ctx.arc(r.x,r.y-64,24,0,Math.PI*2);ctx.fill();
@@ -170,7 +190,7 @@ export function floodGame(s:Services):Game {
       for(const b of projectiles){ctx.fillStyle='#fff0c6';ctx.strokeStyle='#8e7b5d';ctx.beginPath();ctx.arc(b.x,b.y,8,0,Math.PI*2);ctx.fill();ctx.stroke();}
       if(wall){const x=shore(1);ctx.strokeStyle='#966b3c';ctx.lineWidth=7;for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(x+i*7,wy+12);ctx.lineTo(x+i*7-13,wy-65);ctx.stroke();}label(ctx,'TƯỜNG CHẮN',x+10,wy-80,14);}
       if(time>50)sprite(ctx,'thuy',1190,260,100,155);
-      label(ctx,'ĐÁ TRÊN NÚI → NHẶT E → VỀ GIỮA NÂNG ĐẤT',640,680,16);
+      label(ctx,'BÊN PHẢI: NHẶT ĐÁ (E)  →  BÊN TRÁI: NÂNG NÚI (E)',640,650,16);
     }
   };
 }

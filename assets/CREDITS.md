@@ -7,3 +7,5 @@
 Hình ảnh lấy cảm hứng Đông Hồ/trống đồng, là minh họa cách điệu, không phải phục dựng trang phục lịch sử. Cần kiểm tra quy định công bố AI của BTC khi nộp.
 
 - Font: Be Vietnam Pro qua `@fontsource/be-vietnam-pro` (font Latin và tiếng Việt, lưu cục bộ). Giữ giấy phép SIL Open Font License trong package khi phân phối mã nguồn/dependencies.
+- `concepts/ui/`: hai nền menu/kể chuyện tạo mới bằng imagegen, dựa trên ảnh mẫu do người dùng cung cấp; prompt trong `concepts/ui/README.md`.
+- Font tiêu đề menu: Playfair Display 700 (Latin + tiếng Việt), đóng gói cục bộ qua `@fontsource/playfair-display`.

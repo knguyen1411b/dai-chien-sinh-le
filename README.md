@@ -57,3 +57,11 @@ node scripts/generate-audio.mjs
 
 21 file gồm 17 hiệu ứng và bốn vòng nhạc 4.8 giây (100 BPM). Âm thanh tạo từ dao động số, không sử dụng sample của bên thứ ba. Nguồn và ghi chú assets ở `assets/CREDITS.md`.
 
+
+## Menu và kể chuyện theo mẫu mới
+
+Menu dùng nền giấy với khung viền, tiêu đề Playfair Display hỗ trợ tiếng Việt, chọn độ khó bằng ba nút, nút bắt đầu đỏ gạch và các ô chọn màn có sao thực tế. Cài đặt cho phép bật/tắt tiếng và chỉnh độ trễ. Truyện mở đầu gồm hai khung với tranh Vua Hùng ra đề, hộp thoại ở đáy; Space/Enter để tiếp, Esc để bỏ qua. Truyện rước dâu và đoạn kết dùng chung bố cục này. Hai nền mới và prompt lưu trong `assets/concepts/ui`. Không chạy game/build sau đợt sửa này theo yêu cầu người dùng.
+
+## Bố cục Màn 4 — núi trái, bãi đá phải
+
+Núi và bệ nâng đặt bên trái, nhà Mị Nương nằm trên đỉnh. Bãi nhặt đá riêng ở bên phải, nối bằng lối dốc đi bộ được. Đá có sẵn tăng từ 6 lên 14 viên, giới hạn tăng từ 8 lên 18, bổ sung một viên mỗi 0.6 giây thay vì 1.5 giây. Giữ E gần đá để nhặt, mang tối đa 4 ô, đi sang trái và E tại bệ để nâng núi. Cua vẫn dưới nước; chế độ Dễ không làm rơi đồ khi sóng chạm. Khung nhìn cố định, không cuộn. Chưa chạy kiểm tra theo yêu cầu người dùng.
